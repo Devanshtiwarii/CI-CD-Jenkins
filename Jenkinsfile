@@ -2,6 +2,10 @@ pipeline {
 
     agent any
 
+    environment {
+        DOCKER_IMAGE = 'devanshtiwari2426/rps-app'
+    }
+
     stages {
 
         stage('Checkout') {
@@ -52,11 +56,35 @@ pipeline {
             steps {
                 sh '''
                     docker build \
-                        -t rps-app:${BUILD_NUMBER} \
+                        -t $DOCKER_IMAGE:$BUILD_NUMBER \
                         .
                 '''
             }
         }
 
+        stage('Docker Push') {
+            steps {
+
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'dockerhub-creds',
+                        usernameVariable: 'DOCKER_USERNAME',
+                        passwordVariable: 'DOCKER_PASSWORD'
+                    )
+                ]) {
+
+                    sh '''
+                        echo "$DOCKER_PASSWORD" | \
+                        docker login \
+                        --username "$DOCKER_USERNAME" \
+                        --password-stdin
+
+                        docker push $DOCKER_IMAGE:$BUILD_NUMBER
+
+                        docker logout
+                    '''
+                }
+            }
+        }
     }
 }
